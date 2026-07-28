@@ -1,5 +1,6 @@
 import './globals.css';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/next';
 import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
 import WhatsAppButton from './components/WhatsAppButton';
@@ -43,6 +44,7 @@ export default function RootLayout({ children }) {
             <WhatsAppButton />
           </CurrencyProvider>
         </LanguageProvider>
+        <Analytics />
       </body>
     </html>
   );
