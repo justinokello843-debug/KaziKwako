@@ -7,8 +7,26 @@ import WhatsAppButton from './components/WhatsAppButton';
 const GA_MEASUREMENT_ID = 'G-M4HJVG4PRW';
 
 export const metadata = {
-  title: 'Kazi — Get notified the moment a matching job goes live',
-  description: 'Sign up once. Get emailed when a verified job matching your role goes live.',
+  metadataBase: new URL('https://kazikwako.space'),
+  title: {
+    default: 'Kazi — Verified job alerts, sent the moment a matching role goes live',
+    template: '%s | Kazi',
+  },
+  description: 'Kazi is the verified job platform: every employer is checked before they can post. Sign up once and get emailed the moment a matching job goes live — free for job seekers, always.',
+  keywords: ['Kazi', 'kazikwako', 'jobs in Kenya', 'verified jobs', 'job alerts', 'remote jobs Africa', 'job platform'],
+  openGraph: {
+    title: 'Kazi — Verified job alerts, sent the moment a matching role goes live',
+    description: 'Every employer is verified before they can post. Sign up once, get emailed when a matching job goes live.',
+    url: 'https://kazikwako.space',
+    siteName: 'Kazi',
+    locale: 'en_KE',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Kazi — Verified job alerts',
+    description: 'Every employer is verified before they can post. Sign up once, get emailed when a matching job goes live.',
+  },
 };
 
 export default function RootLayout({ children }) {
