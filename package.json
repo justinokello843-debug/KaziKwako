@@ -1,0 +1,19 @@
+{
+  "name": "kazi",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "16.2.12",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@supabase/supabase-js": "2.45.0"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "5.15.12"
+  }
+}
