@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
 import WhatsAppButton from './components/WhatsAppButton';
+import { Analytics } from '@vercel/analytics/next';
 
 const GA_MEASUREMENT_ID = 'G-RJZE8K8E56';
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }) {
             <WhatsAppButton />
           </CurrencyProvider>
         </LanguageProvider>
+        <Analytics />
       </body>
     </html>
   );
