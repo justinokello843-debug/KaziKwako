@@ -87,6 +87,34 @@ export async function POST(request) {
       return Response.json({ error: 'Something went wrong saving your details.' }, { status: 500 });
     }
 
+    // Send a welcome email — failure here shouldn't fail the signup itself,
+    // since their data is already safely saved either way.
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.ALERTS_FROM_EMAIL,
+          to: email,
+          subject: `Welcome to Kazi, ${full_name.split(' ')[0]} — here's what happens next`,
+          html: `
+            <p>Hi ${full_name.split(' ')[0]},</p>
+            <p>Thank you for signing up with Kazi. You're now set up to hear about verified <strong>${role_interest}</strong> roles the moment they go live — no need to keep checking back.</p>
+            <p>Here's what makes Kazi different: every employer on the platform is checked — a real business, reviewed, before they're ever allowed to post. So when you get an email from us saying a job matches you, it's a real one, not a stale listing or a scam dressed up as an opportunity.</p>
+            <p><strong>What happens next:</strong> the moment a verified employer posts a role matching what you're looking for, you'll hear from us directly by email — no applying blind, no guessing whether the job's still open.</p>
+            <p>In the meantime, if there's anything you'd like to ask, just reply directly to this email, or reach us on WhatsApp at <a href="https://wa.me/254780228067">+254 780 228 067</a> — a real person will get back to you.</p>
+            <p>Glad to have you with us — your next opportunity might already be on its way.</p>
+            <p>The Kazi Team</p>
+          `,
+        }),
+      });
+    } catch (emailErr) {
+      console.error('Welcome email failed to send:', emailErr);
+    }
+
     return Response.json({ success: true });
   } catch (err) {
     console.error('Signup route error:', err);

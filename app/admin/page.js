@@ -2,6 +2,87 @@
 
 import { useState } from 'react';
 
+function BroadcastForm() {
+  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setStatus('loading');
+    setMessage('');
+
+    const form = e.target;
+    const payload = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const res = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus('error');
+        setMessage(data.error || 'Something went wrong.');
+        return;
+      }
+
+      setStatus('success');
+      setMessage(
+        data.warning
+          ? data.warning
+          : `Sent to ${data.sent} of ${data.total} subscriber(s).${data.failed ? ` ${data.failed} failed.` : ''}`
+      );
+      form.reset();
+      form.passcode.value = payload.passcode;
+    } catch (err) {
+      setStatus('error');
+      setMessage('Network error — try again.');
+    }
+  }
+
+  return (
+    <div className="admin-card" style={{ marginTop: 32 }}>
+      <h1 className="display" style={{ fontStyle: 'italic', fontSize: 24 }}>Send an update to subscribers</h1>
+      <p className="sub">Not tied to a job posting — use this for announcements, platform news, or anything else you want to tell your list directly.</p>
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-grid">
+          <div className="field full">
+            <label htmlFor="b-passcode">Admin passcode</label>
+            <input id="b-passcode" name="passcode" type="password" required />
+          </div>
+          <div className="field full">
+            <label htmlFor="subject">Subject line</label>
+            <input id="subject" name="subject" type="text" required />
+          </div>
+          <div className="field full">
+            <label htmlFor="message">Message</label>
+            <textarea id="message" name="message" rows={5} required />
+          </div>
+          <div className="field">
+            <label htmlFor="role_filter">Only send to role containing (optional)</label>
+            <input id="role_filter" name="role_filter" type="text" placeholder="Leave blank to reach everyone" />
+          </div>
+          <div className="field">
+            <label htmlFor="location_filter">Only send to location containing (optional)</label>
+            <input id="location_filter" name="location_filter" type="text" placeholder="Leave blank to reach everyone" />
+          </div>
+        </div>
+
+        <button className="btn" type="submit" disabled={status === 'loading'}>
+          {status === 'loading' ? 'Sending…' : 'Send update'}
+        </button>
+
+        {message && (
+          <p className={`msg ${status === 'success' ? 'ok' : status === 'error' ? 'err' : ''}`}>{message}</p>
+        )}
+      </form>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
@@ -99,6 +180,8 @@ export default function AdminPage() {
           )}
         </form>
       </div>
+
+      <BroadcastForm />
     </div>
   );
 }
