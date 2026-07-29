@@ -37,6 +37,24 @@ create table if not exists notifications_log (
   sent_at timestamptz default now()
 );
 
+-- 4. A running record of every automated message the platform sends —
+--    welcome emails, job-match alerts, and manual broadcasts — so there's
+--    always a clear audit trail of what went out, to whom, and when.
+create table if not exists message_log (
+  id uuid primary key default gen_random_uuid(),
+  message_type text not null,        -- 'welcome' | 'job_alert' | 'broadcast' | 'shortlist'
+  recipient_email text not null,
+  subject text,
+  related_job_id uuid references jobs(id) on delete set null,
+  status text not null default 'sent', -- 'sent' | 'failed'
+  sent_at timestamptz default now()
+);
+
+create index if not exists idx_message_log_type on message_log (message_type);
+create index if not exists idx_message_log_sent_at on message_log (sent_at desc);
+
+alter table message_log enable row level security;
+
 -- Make role/location lookups fast as your list grows
 create index if not exists idx_subscribers_role on subscribers (role_interest);
 create index if not exists idx_subscribers_location on subscribers (location);

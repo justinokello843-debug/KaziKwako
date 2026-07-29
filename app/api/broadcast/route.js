@@ -1,4 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
+import { logMessage } from '../../../lib/messageLog';
+import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -46,6 +48,15 @@ export async function POST(request) {
     const failures = [];
 
     for (const person of recipients) {
+      const broadcastHtml = renderEmail({
+        eyebrow: 'An Update From Kazi',
+        heading: subject,
+        bodyHtml: `
+          <p style="margin:0 0 24px;">${String(message).replace(/\n/g, '<br/>')}</p>
+        `,
+        ctaHtml: whatsappButton(`Hi, I got your update about "${subject}" and had a question.`),
+      });
+
       try {
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -57,24 +68,22 @@ export async function POST(request) {
             from: process.env.ALERTS_FROM_EMAIL,
             to: person.email,
             subject,
-            html: `
-              <p>Hi ${person.full_name || 'there'},</p>
-              <div>${String(message).replace(/\n/g, '<br/>')}</div>
-              <hr/>
-              <p style="font-size:12px;color:#888;">You're getting this because you signed up for Kazi job alerts. Reply "unsubscribe" any time to stop.</p>
-            `,
+            html: broadcastHtml,
           }),
         });
 
         if (res.ok) {
           sent++;
+          await logMessage({ messageType: 'broadcast', recipientEmail: person.email, subject, status: 'sent' });
         } else {
           failures.push(person.email);
           console.error('Broadcast send failed for', person.email, await res.text());
+          await logMessage({ messageType: 'broadcast', recipientEmail: person.email, subject, status: 'failed' });
         }
       } catch (err) {
         failures.push(person.email);
         console.error('Broadcast send error for', person.email, err);
+        await logMessage({ messageType: 'broadcast', recipientEmail: person.email, subject, status: 'failed' });
       }
     }
 

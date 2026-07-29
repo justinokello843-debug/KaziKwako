@@ -83,6 +83,223 @@ function BroadcastForm() {
   );
 }
 
+function ShortlistTool() {
+  const [passcode, setPasscode] = useState('');
+  const [jobs, setJobs] = useState([]);
+  const [selectedJobId, setSelectedJobId] = useState('');
+  const [candidates, setCandidates] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState('');
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+
+  async function loadJobs() {
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await fetch('/api/jobs-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Could not load jobs.'); return; }
+      setJobs(data.jobs);
+      setStatus('idle');
+      if (data.jobs.length === 0) setMessage('No jobs posted yet — post one first.');
+    } catch (err) {
+      setStatus('error'); setMessage('Network error — try again.');
+    }
+  }
+
+  async function loadCandidates(jobId) {
+    setSelectedJobId(jobId);
+    setCandidates([]);
+    setSelectedIds(new Set());
+    if (!jobId) return;
+    setLoadingCandidates(true);
+    try {
+      const res = await fetch('/api/shortlist-candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, job_id: jobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMessage(data.error || 'Could not load candidates.'); return; }
+      setCandidates(data.candidates);
+      if (data.candidates.length === 0) setMessage('No matching subscribers found for this job yet.');
+      else setMessage('');
+    } catch (err) {
+      setMessage('Network error loading candidates.');
+    } finally {
+      setLoadingCandidates(false);
+    }
+  }
+
+  function toggleCandidate(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function sendShortlist() {
+    if (selectedIds.size === 0) { setMessage('Select at least one candidate first.'); return; }
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await fetch('/api/shortlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, job_id: selectedJobId, subscriber_ids: Array.from(selectedIds) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Something went wrong.'); return; }
+      setStatus('success');
+      setMessage(`Shortlist notice sent to ${data.sent} of ${data.total} selected candidate(s).${data.failed ? ` ${data.failed} failed.` : ''}`);
+      setSelectedIds(new Set());
+    } catch (err) {
+      setStatus('error'); setMessage('Network error — try again.');
+    }
+  }
+
+  return (
+    <div className="admin-card" style={{ marginTop: 32 }}>
+      <h1 className="display" style={{ fontStyle: 'italic', fontSize: 24 }}>Shortlist candidates for a job</h1>
+      <p className="sub">Pick a job, review who actually matches it, and choose exactly who gets notified — only the people you select receive anything.</p>
+
+      <div className="form-grid" style={{ marginBottom: 16 }}>
+        <div className="field">
+          <label>Admin passcode</label>
+          <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} />
+        </div>
+        <div className="field" style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <button type="button" className="btn" style={{ marginTop: 0 }} onClick={loadJobs} disabled={!passcode || status === 'loading'}>
+            Load my posted jobs
+          </button>
+        </div>
+      </div>
+
+      {jobs.length > 0 && (
+        <div className="field full" style={{ marginBottom: 16 }}>
+          <label>Choose a job</label>
+          <select value={selectedJobId} onChange={(e) => loadCandidates(e.target.value)}>
+            <option value="">Select a job...</option>
+            {jobs.map((j) => (
+              <option key={j.id} value={j.id}>{j.title} — {j.company} ({j.location})</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {loadingCandidates && <p className="sub">Loading candidates…</p>}
+
+      {candidates.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontFamily: "'Space Mono',monospace", fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(247,243,233,.55)', marginBottom: 8 }}>
+            Eligible candidates ({candidates.length}) — check who to shortlist
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+            {candidates.map((c) => (
+              <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(247,243,233,.06)', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, padding: '10px 12px', fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleCandidate(c.id)} />
+                <span>{c.full_name} — {c.email} <span style={{ opacity: 0.6 }}>({c.role_interest}{c.location ? `, ${c.location}` : ''}{c.cv_url ? ', CV on file' : ', no CV'})</span></span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {candidates.length > 0 && (
+        <button type="button" className="btn" onClick={sendShortlist} disabled={status === 'loading' || selectedIds.size === 0}>
+          {status === 'loading' ? 'Sending…' : `Shortlist selected (${selectedIds.size})`}
+        </button>
+      )}
+
+      {message && (
+        <p className={`msg ${status === 'success' ? 'ok' : status === 'error' ? 'err' : ''}`}>{message}</p>
+      )}
+    </div>
+  );
+}
+
+function MessageLogViewer() {
+  const [passcode, setPasscode] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [entries, setEntries] = useState(null);
+  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState('');
+
+  async function loadLog() {
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, message_type: filter }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Could not load the log.'); return; }
+      setEntries(data.entries);
+      setStatus('idle');
+      if (data.entries.length === 0) setMessage('No messages logged yet for this filter.');
+    } catch (err) {
+      setStatus('error'); setMessage('Network error — try again.');
+    }
+  }
+
+  return (
+    <div className="admin-card" style={{ marginTop: 32 }}>
+      <h1 className="display" style={{ fontStyle: 'italic', fontSize: 24 }}>Message log</h1>
+      <p className="sub">Every automated email the platform has ever sent — welcome messages, job alerts, broadcasts, and shortlist notices — in one place.</p>
+
+      <div className="form-grid" style={{ marginBottom: 16 }}>
+        <div className="field">
+          <label>Admin passcode</label>
+          <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Filter by type</label>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">All messages</option>
+            <option value="welcome">Welcome emails</option>
+            <option value="job_alert">Job match alerts</option>
+            <option value="broadcast">Broadcasts</option>
+            <option value="shortlist">Shortlist notices</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" className="btn" onClick={loadLog} disabled={!passcode || status === 'loading'}>
+        {status === 'loading' ? 'Loading…' : 'Load message log'}
+      </button>
+
+      {message && (
+        <p className={`msg ${status === 'error' ? 'err' : ''}`}>{message}</p>
+      )}
+
+      {entries && entries.length > 0 && (
+        <div style={{ marginTop: 20, maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {entries.map((e) => (
+            <div key={e.id} style={{ background: 'rgba(247,243,233,.06)', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, padding: '10px 12px', fontSize: 12.5 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span className="mono" style={{ color: e.status === 'sent' ? '#7fe0c4' : '#ff9b7a', fontSize: 10, textTransform: 'uppercase' }}>
+                  {e.message_type} · {e.status}
+                </span>
+                <span className="mono" style={{ fontSize: 10, opacity: 0.5 }}>{new Date(e.sent_at).toLocaleString()}</span>
+              </div>
+              <div style={{ opacity: 0.9 }}>{e.recipient_email}</div>
+              {e.subject && <div style={{ opacity: 0.6, marginTop: 2 }}>{e.subject}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
@@ -182,6 +399,8 @@ export default function AdminPage() {
       </div>
 
       <BroadcastForm />
+      <ShortlistTool />
+      <MessageLogViewer />
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
+import { logMessage } from '../../../lib/messageLog';
+import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -58,6 +60,23 @@ export async function POST(request) {
     // 3. Email each matching subscriber via Resend
     let notified = 0;
     for (const sub of relevant) {
+      const alertSubject = `New match: ${title} at ${company}`;
+      const alertHtml = renderEmail({
+        eyebrow: 'New Match',
+        heading: `A new ${sub.role_interest} role just went live.`,
+        bodyHtml: `
+          <p style="margin:0 0 16px;">A verified job matching what you signed up for was just posted:</p>
+          <div style="background:#F7F3E9;border-left:3px solid #E8A33D;border-radius:6px;padding:16px 20px;margin:0 0 22px;">
+            <div style="font-size:16px;font-weight:bold;color:#14213D;">${title}</div>
+            <div style="font-size:14px;color:#C1440E;margin-top:2px;">${company}</div>
+            <div style="font-size:13px;color:#6b6b6b;margin-top:8px;">${location} · ${job_type || 'Full-time'}${salary_range ? ' · ' + salary_range : ''}</div>
+          </div>
+          <p style="margin:0 0 24px;">${description.slice(0, 240)}${description.length > 240 ? '…' : ''}</p>
+          ${apply_url ? `<p style="margin:0 0 24px;"><a href="${apply_url}" style="color:#14213D;font-weight:bold;">Apply here →</a></p>` : ''}
+        `,
+        ctaHtml: whatsappButton(`Hi, I got an alert for ${title} at ${company} and had a question.`),
+      });
+
       try {
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -68,28 +87,22 @@ export async function POST(request) {
           body: JSON.stringify({
             from: process.env.ALERTS_FROM_EMAIL,
             to: sub.email,
-            subject: `New match: ${title} at ${company}`,
-            html: `
-              <p>Hi ${sub.full_name || 'there'},</p>
-              <p>A new role matching <strong>${sub.role_interest}</strong> was just posted:</p>
-              <h2>${title} — ${company}</h2>
-              <p>${location} · ${job_type || ''} ${salary_range ? '· ' + salary_range : ''}</p>
-              <p>${description.slice(0, 240)}${description.length > 240 ? '…' : ''}</p>
-              ${apply_url ? `<p><a href="${apply_url}">Apply here</a></p>` : ''}
-              <hr/>
-              <p style="font-size:12px;color:#888;">You're getting this because you signed up for Kazi job alerts for "${sub.role_interest}". You can unsubscribe any time by replying to this email.</p>
-            `,
+            subject: alertSubject,
+            html: alertHtml,
           }),
         });
 
         if (res.ok) {
           notified++;
           await supabaseAdmin.from('notifications_log').insert({ job_id: job.id, subscriber_id: sub.id });
+          await logMessage({ messageType: 'job_alert', recipientEmail: sub.email, subject: alertSubject, relatedJobId: job.id, status: 'sent' });
         } else {
           console.error('Resend failed for', sub.email, await res.text());
+          await logMessage({ messageType: 'job_alert', recipientEmail: sub.email, subject: alertSubject, relatedJobId: job.id, status: 'failed' });
         }
       } catch (emailErr) {
         console.error('Email send error for', sub.email, emailErr);
+        await logMessage({ messageType: 'job_alert', recipientEmail: sub.email, subject: alertSubject, relatedJobId: job.id, status: 'failed' });
       }
     }
 
