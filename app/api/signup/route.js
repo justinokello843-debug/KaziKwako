@@ -1,6 +1,7 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
 import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { recordReferralEvent } from '../../../lib/referral';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -20,6 +21,7 @@ export async function POST(request) {
     const location = formData.get('location')?.toString().trim() || null;
     const experience_level = formData.get('experience_level')?.toString().trim() || null;
     const cvFile = formData.get('cv'); // optional File
+    const incomingRefCode = formData.get('ref_code')?.toString().trim().toUpperCase() || null;
 
     if (!full_name || !email || !role_interest) {
       return Response.json(
@@ -87,6 +89,10 @@ export async function POST(request) {
     if (dbError) {
       console.error('Signup insert failed:', dbError.message);
       return Response.json({ error: 'Something went wrong saving your details.' }, { status: 500 });
+    }
+
+    if (incomingRefCode) {
+      await recordReferralEvent({ code: incomingRefCode, referredEmail: email, eventType: 'signup' });
     }
 
     // Send a welcome email — failure here shouldn't fail the signup itself,

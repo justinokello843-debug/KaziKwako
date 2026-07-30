@@ -1,6 +1,7 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
 import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { getOrCreateReferralCode, recordReferralEvent } from '../../../lib/referral';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -19,6 +20,7 @@ export async function POST(request) {
     const phone = formData.get('phone')?.toString().trim() || null;
     const cover_note = formData.get('cover_note')?.toString().trim() || null;
     const cvFile = formData.get('cv');
+    const incomingRefCode = formData.get('ref_code')?.toString().trim().toUpperCase() || null;
 
     if (!job_id || !full_name || !email) {
       return Response.json({ error: 'Name, email, and the job you\'re applying to are required.' }, { status: 400 });
@@ -117,7 +119,26 @@ export async function POST(request) {
       await logMessage({ messageType: 'application', recipientEmail: email, subject, relatedJobId: job_id, status: 'failed' });
     }
 
-    return Response.json({ success: true });
+    // If they arrived via someone else's referral link, credit that person —
+    // silently skipped if the code is invalid, self-referred, or already counted
+    if (incomingRefCode) {
+      await recordReferralEvent({ code: incomingRefCode, referredEmail: email, eventType: 'application', jobId: job_id });
+    }
+
+    // Every applicant gets their own referral code to share going forward
+    let referralCode = null;
+    try {
+      referralCode = await getOrCreateReferralCode({ full_name, email });
+    } catch (refErr) {
+      console.error('Referral code generation failed (non-fatal):', refErr);
+    }
+
+    return Response.json({
+      success: true,
+      referral: referralCode
+        ? { code: referralCode, link: `https://kazikwako.space/jobs/${job_id}?ref=${referralCode}` }
+        : null,
+    });
   } catch (err) {
     console.error('Apply route error:', err);
     return Response.json({ error: 'Unexpected error. Please try again.' }, { status: 500 });

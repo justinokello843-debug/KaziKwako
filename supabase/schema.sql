@@ -76,14 +76,38 @@ create index if not exists idx_message_log_sent_at on message_log (sent_at desc)
 create index if not exists idx_subscribers_role on subscribers (role_interest);
 create index if not exists idx_subscribers_location on subscribers (location);
 
--- Enable Row Level Security (recommended). We insert/read via the server using
--- the service role key, which bypasses these policies, so the site keeps working;
--- this just blocks randoms from reading the tables directly via the public API.
+-- 6. One referral code per person, generated the moment they finish applying
+--    to a job. They share it with friends/family to earn reward tiers.
+create table if not exists referral_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  owner_name text not null,
+  owner_email text not null unique,
+  created_at timestamptz default now()
+);
+
+-- 7. Every qualifying referral — someone new who signed up or applied using
+--    a referral code. One row per unique referred person per code, so the
+--    same friend can't be counted twice toward the same referrer's total.
+create table if not exists referral_events (
+  id uuid primary key default gen_random_uuid(),
+  referral_code text not null references referral_codes(code) on delete cascade,
+  referred_email text not null,
+  event_type text not null,           -- 'signup' | 'application'
+  related_job_id uuid references jobs(id) on delete set null,
+  created_at timestamptz default now(),
+  unique (referral_code, referred_email)
+);
+
+create index if not exists idx_referral_events_code on referral_events (referral_code);
+
 alter table subscribers enable row level security;
 alter table jobs enable row level security;
 alter table notifications_log enable row level security;
 alter table message_log enable row level security;
 alter table applications enable row level security;
+alter table referral_codes enable row level security;
+alter table referral_events enable row level security;
 
 -- Anyone can read job listings (so the homepage can show them)
 create policy "Public can read jobs" on jobs

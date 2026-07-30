@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
 import WhatsAppButton from './components/WhatsAppButton';
+import ReferralCapture from './components/ReferralCapture';
 
 const GA_MEASUREMENT_ID = 'G-M4HJVG4PRW';
 
@@ -57,6 +58,7 @@ export default function RootLayout({ children }) {
 
         <LanguageProvider>
           <CurrencyProvider>
+            <ReferralCapture />
             {children}
             <WhatsAppButton />
           </CurrencyProvider>

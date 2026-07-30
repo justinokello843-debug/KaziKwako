@@ -152,6 +152,37 @@ h1.hero-h1 em{ color:var(--clay); font-style:italic; }
   display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; margin:0 auto 16px;
 }
 .apply-success p{ font-size:14.5px; line-height:1.6; }
+
+/* refer & earn panel */
+.refer-panel{
+  margin-top:26px; background:linear-gradient(145deg, #FFF6E4, #FDEBD0);
+  border:1.5px solid var(--gold); border-radius:16px; padding:24px; text-align:left; color:var(--charcoal);
+}
+.refer-badge{
+  display:inline-block; font-family:'Space Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.04em;
+  background:var(--gold); color:var(--ink); padding:5px 12px; border-radius:100px; margin-bottom:12px;
+}
+.refer-heading{ font-family:'Instrument Serif',serif; font-style:italic; font-weight:400; font-size:21px; color:var(--ink); margin:0 0 10px; }
+.refer-copy{ font-size:14px; line-height:1.6; color:var(--charcoal); margin:0 0 18px; }
+.refer-amount{ color:var(--clay); }
+.refer-link-row{ display:flex; gap:8px; margin-bottom:12px; }
+.refer-link-row input{
+  flex:1; min-width:0; background:#fff; border:1px solid rgba(20,33,61,.18); border-radius:10px;
+  padding:11px 13px; font-size:13px; color:var(--ink); font-family:'Space Mono',monospace;
+}
+.refer-copy-btn{
+  flex-shrink:0; background:var(--ink); color:var(--parchment); border:none; border-radius:10px;
+  padding:11px 18px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+}
+.refer-whatsapp-btn{
+  display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  background:#25D366; color:#fff; border-radius:100px; padding:13px 20px; font-weight:700; font-size:14px;
+  text-decoration:none; margin-bottom:14px;
+}
+.refer-fineprint{ font-size:11px; color:rgba(32,28,28,.5); margin:0; }
+@media (max-width:500px){
+  .refer-link-row{ flex-direction:column; }
+}
 @media (max-width:900px){
   .job-detail-grid{ grid-template-columns:1fr; }
   .job-detail-apply-panel{ position:static; }

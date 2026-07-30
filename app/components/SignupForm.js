@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getStoredReferralCode } from './ReferralCapture';
 
 export default function SignupForm() {
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
@@ -13,6 +14,8 @@ export default function SignupForm() {
 
     const form = e.target;
     const formData = new FormData(form);
+    const refCode = getStoredReferralCode();
+    if (refCode) formData.set('ref_code', refCode);
 
     try {
       const res = await fetch('/api/signup', { method: 'POST', body: formData });

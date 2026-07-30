@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { getStoredReferralCode } from './ReferralCapture';
+import ReferAndEarn from './ReferAndEarn';
 
 export default function ApplyForm({ job }) {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
+  const [referral, setReferral] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -14,6 +17,8 @@ export default function ApplyForm({ job }) {
     const form = e.target;
     const formData = new FormData(form);
     formData.set('job_id', job.id);
+    const refCode = getStoredReferralCode();
+    if (refCode) formData.set('ref_code', refCode);
 
     try {
       const res = await fetch('/api/apply', { method: 'POST', body: formData });
@@ -27,6 +32,7 @@ export default function ApplyForm({ job }) {
 
       setStatus('success');
       setMessage("Application received! We'll review your CV and be in touch if you're shortlisted.");
+      setReferral(data.referral || null);
       form.reset();
     } catch (err) {
       setStatus('error');
@@ -39,6 +45,7 @@ export default function ApplyForm({ job }) {
       <div className="apply-success">
         <div className="apply-success-icon">✓</div>
         <p>{message}</p>
+        {referral && <ReferAndEarn link={referral.link} jobTitle={job.title} />}
       </div>
     );
   }
