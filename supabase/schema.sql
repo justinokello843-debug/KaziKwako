@@ -65,7 +65,7 @@ create table if not exists applications (
   phone text,
   cover_note text,
   cv_url text,
-  status text not null default 'new',  -- 'new' | 'reviewed' | 'forwarded' | 'rejected'
+  status text not null default 'new',  -- 'new' | 'reviewed' | 'shortlisted' | 'forwarded' | 'rejected'
   created_at timestamptz default now()
 );
 

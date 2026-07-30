@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 
-const VALID_STATUSES = ['new', 'reviewed', 'forwarded', 'rejected'];
+const VALID_STATUSES = ['new', 'reviewed', 'shortlisted', 'forwarded', 'rejected'];
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {

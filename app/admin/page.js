@@ -267,7 +267,9 @@ function MessageLogViewer() {
             <option value="welcome">Welcome emails</option>
             <option value="job_alert">Job match alerts</option>
             <option value="broadcast">Broadcasts</option>
+            <option value="application">Application confirmations</option>
             <option value="shortlist">Shortlist notices</option>
+            <option value="rejection">Rejection notices</option>
           </select>
         </div>
       </div>
@@ -339,6 +341,35 @@ function ApplicationsViewer() {
     }
   }
 
+  const [decidingId, setDecidingId] = useState(null);
+  const [decisionNote, setDecisionNote] = useState({});
+
+  async function decide(applicationId, decision) {
+    setDecidingId(applicationId);
+    setDecisionNote((prev) => ({ ...prev, [applicationId]: '' }));
+    try {
+      const res = await fetch('/api/decide-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, application_id: applicationId, decision }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDecisionNote((prev) => ({ ...prev, [applicationId]: data.error || 'Something went wrong.' }));
+        return;
+      }
+      setApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status: data.status } : a)));
+      setDecisionNote((prev) => ({
+        ...prev,
+        [applicationId]: data.emailed ? `✓ Candidate emailed (${decision === 'shortlist' ? 'shortlisted' : 'rejected'}).` : (data.warning || 'Status updated.'),
+      }));
+    } catch (err) {
+      setDecisionNote((prev) => ({ ...prev, [applicationId]: 'Network error — try again.' }));
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
   return (
     <div className="admin-card" style={{ marginTop: 32 }}>
       <h1 className="display" style={{ fontStyle: 'italic', fontSize: 24 }}>Applications received</h1>
@@ -355,6 +386,7 @@ function ApplicationsViewer() {
             <option value="all">All applications</option>
             <option value="new">New</option>
             <option value="reviewed">Reviewed</option>
+            <option value="shortlisted">Shortlisted</option>
             <option value="forwarded">Forwarded to employer</option>
             <option value="rejected">Rejected</option>
           </select>
@@ -373,16 +405,22 @@ function ApplicationsViewer() {
             <div key={a.id} style={{ background: 'rgba(247,243,233,.06)', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, padding: '14px 16px', fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                 <strong>{a.full_name}</strong>
-                <select
-                  value={a.status}
-                  onChange={(e) => updateStatus(a.id, e.target.value)}
-                  style={{ background: 'rgba(247,243,233,.1)', color: '#F7F3E9', border: '1px solid rgba(247,243,233,.2)', borderRadius: 6, fontSize: 11, padding: '4px 8px' }}
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10, textTransform: 'uppercase', padding: '3px 9px', borderRadius: 100,
+                    background:
+                      a.status === 'shortlisted' ? 'rgba(31,138,112,.18)' :
+                      a.status === 'rejected' ? 'rgba(193,68,14,.18)' :
+                      a.status === 'forwarded' ? 'rgba(232,163,61,.18)' : 'rgba(247,243,233,.1)',
+                    color:
+                      a.status === 'shortlisted' ? '#7fe0c4' :
+                      a.status === 'rejected' ? '#ff9b7a' :
+                      a.status === 'forwarded' ? '#E8A33D' : 'rgba(247,243,233,.7)',
+                  }}
                 >
-                  <option value="new">New</option>
-                  <option value="reviewed">Reviewed</option>
-                  <option value="forwarded">Forwarded</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                  {a.status}
+                </span>
               </div>
               <div style={{ opacity: 0.85 }}>{a.email}{a.phone ? ` · ${a.phone}` : ''}</div>
               <div style={{ opacity: 0.6, marginTop: 2 }}>Applied for: {a.jobs?.title} — {a.jobs?.company}</div>
@@ -392,7 +430,42 @@ function ApplicationsViewer() {
                   <a href={a.cv_url} target="_blank" rel="noreferrer" style={{ color: '#E8A33D', fontWeight: 700, fontSize: 12 }}>View CV →</a>
                 </div>
               )}
-              <div className="mono" style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>{new Date(a.created_at).toLocaleString()}</div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => decide(a.id, 'shortlist')}
+                  disabled={decidingId === a.id}
+                  style={{ background: '#1F8A70', color: '#fff', border: 'none', borderRadius: 100, padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {decidingId === a.id ? 'Sending…' : '✓ Shortlist & notify'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => decide(a.id, 'reject')}
+                  disabled={decidingId === a.id}
+                  style={{ background: 'transparent', color: '#ff9b7a', border: '1px solid rgba(255,155,122,.4)', borderRadius: 100, padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {decidingId === a.id ? 'Sending…' : 'Reject & notify'}
+                </button>
+                <select
+                  value={a.status}
+                  onChange={(e) => updateStatus(a.id, e.target.value)}
+                  style={{ background: 'rgba(247,243,233,.1)', color: '#F7F3E9', border: '1px solid rgba(247,243,233,.2)', borderRadius: 6, fontSize: 11, padding: '4px 8px', marginLeft: 'auto' }}
+                  title="Manual status change — does not send an email"
+                >
+                  <option value="new">Mark: New</option>
+                  <option value="reviewed">Mark: Reviewed</option>
+                  <option value="forwarded">Mark: Forwarded to employer</option>
+                </select>
+              </div>
+              {decisionNote[a.id] && (
+                <div className="mono" style={{ fontSize: 11, marginTop: 8, color: decisionNote[a.id].startsWith('✓') ? '#7fe0c4' : '#ff9b7a' }}>
+                  {decisionNote[a.id]}
+                </div>
+              )}
+
+              <div className="mono" style={{ fontSize: 10, opacity: 0.5, marginTop: 8 }}>{new Date(a.created_at).toLocaleString()}</div>
             </div>
           ))}
         </div>

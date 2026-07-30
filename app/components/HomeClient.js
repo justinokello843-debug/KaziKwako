@@ -4,6 +4,7 @@ import SignupForm from './SignupForm';
 import LanguageSwitcher from './LanguageSwitcher';
 import PricingSection from './PricingSection';
 import JobCard from './JobCard';
+import JobSearchBar from './JobSearchBar';
 import { useLanguage } from '../../lib/i18n';
 
 export default function HomeClient({ jobs }) {
@@ -55,6 +56,8 @@ export default function HomeClient({ jobs }) {
         <div className="wrap">
           <h2>{t('jobs_title')}</h2>
           <p className="sub">{t('jobs_sub')}</p>
+
+          <JobSearchBar />
 
           {jobs.length === 0 ? (
             <div className="empty-state">{t('jobs_empty')}</div>
