@@ -19,7 +19,7 @@ export async function POST(request) {
 
     const { data: application, error: fetchError } = await supabaseAdmin
       .from('applications')
-      .select('id, full_name, email, job_id, jobs(title, company)')
+      .select('id, full_name, email, job_id, status, jobs(title, company)')
       .eq('id', application_id)
       .single();
 
@@ -27,6 +27,7 @@ export async function POST(request) {
       return Response.json({ error: 'Application not found.' }, { status: 404 });
     }
 
+    const previousStatus = application.status;
     const newStatus = decision === 'shortlist' ? 'shortlisted' : 'rejected';
     const { error: updateError } = await supabaseAdmin
       .from('applications')
@@ -62,21 +63,41 @@ export async function POST(request) {
       });
     } else {
       messageType = 'rejection';
-      subject = `An update on your application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}`;
-      html = renderEmail({
-        eyebrow: 'Application Update',
-        heading: `Thank you for applying, ${firstName}.`,
-        bodyHtml: `
-          <p style="margin:0 0 16px;">After careful review, we won't be moving forward with your application for:</p>
-          <div style="background:#F7F3E9;border-left:3px solid #C1440E;border-radius:6px;padding:16px 20px;margin:0 0 22px;">
-            <div style="font-size:16px;font-weight:bold;color:#14213D;">${jobTitle}</div>
-            ${jobCompany ? `<div style="font-size:14px;color:#C1440E;margin-top:2px;">${jobCompany}</div>` : ''}
-          </div>
-          <p style="margin:0 0 16px;">This isn't a reflection of your worth or potential — hiring decisions come down to a specific, narrow fit for one role at one moment, nothing more. Please don't let this discourage you from continuing to apply.</p>
-          <p style="margin:0 0 28px;">New verified roles go live on Kazi regularly, and we'd genuinely love to see you land one. If you have any questions, our team is one tap away:</p>
-        `,
-        ctaHtml: whatsappButton(`Hi, I had a question about my application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}.`),
-      });
+      const wasPreviouslyShortlisted = previousStatus === 'shortlisted' || previousStatus === 'forwarded';
+
+      if (wasPreviouslyShortlisted) {
+        subject = `An update on ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}`;
+        html = renderEmail({
+          eyebrow: 'Application Update',
+          heading: `An update on your shortlist, ${firstName}.`,
+          bodyHtml: `
+            <p style="margin:0 0 16px;">We let you know earlier that you'd been shortlisted for:</p>
+            <div style="background:#F7F3E9;border-left:3px solid #C1440E;border-radius:6px;padding:16px 20px;margin:0 0 22px;">
+              <div style="font-size:16px;font-weight:bold;color:#14213D;">${jobTitle}</div>
+              ${jobCompany ? `<div style="font-size:14px;color:#C1440E;margin-top:2px;">${jobCompany}</div>` : ''}
+            </div>
+            <p style="margin:0 0 16px;">Since then, the employer made their final decision, and unfortunately they've chosen to move forward with another candidate this time. Being shortlisted meant your application genuinely stood out — this final step often comes down to very fine margins, not a reflection of your ability.</p>
+            <p style="margin:0 0 28px;">Please don't let this discourage you — new verified roles go live on Kazi regularly, and we'd like to see you land one. If you have any questions, our team is one tap away:</p>
+          `,
+          ctaHtml: whatsappButton(`Hi, I had a question about my application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}.`),
+        });
+      } else {
+        subject = `An update on your application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}`;
+        html = renderEmail({
+          eyebrow: 'Application Update',
+          heading: `Thank you for applying, ${firstName}.`,
+          bodyHtml: `
+            <p style="margin:0 0 16px;">After careful review, we won't be moving forward with your application for:</p>
+            <div style="background:#F7F3E9;border-left:3px solid #C1440E;border-radius:6px;padding:16px 20px;margin:0 0 22px;">
+              <div style="font-size:16px;font-weight:bold;color:#14213D;">${jobTitle}</div>
+              ${jobCompany ? `<div style="font-size:14px;color:#C1440E;margin-top:2px;">${jobCompany}</div>` : ''}
+            </div>
+            <p style="margin:0 0 16px;">This isn't a reflection of your worth or potential — hiring decisions come down to a specific, narrow fit for one role at one moment, nothing more. Please don't let this discourage you from continuing to apply.</p>
+            <p style="margin:0 0 28px;">New verified roles go live on Kazi regularly, and we'd genuinely love to see you land one. If you have any questions, our team is one tap away:</p>
+          `,
+          ctaHtml: whatsappButton(`Hi, I had a question about my application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}.`),
+        });
+      }
     }
 
     try {
