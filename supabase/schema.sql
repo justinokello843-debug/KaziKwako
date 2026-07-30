@@ -12,6 +12,10 @@ create table if not exists subscribers (
   experience_level text,              -- e.g. "Entry", "Mid", "Senior"
   cv_url text,                        -- link to uploaded CV in storage
   subscribed boolean default true,    -- false if they unsubscribe later
+  shortlisted boolean default false,
+  shortlisted_at timestamptz,
+  rejected boolean default false,
+  rejected_at timestamptz,
   created_at timestamptz default now()
 );
 
@@ -25,7 +29,7 @@ create table if not exists jobs (
   job_type text,                      -- Full-time / Part-time / Contract / Remote
   salary_range text,
   description text not null,
-  apply_url text,                     -- where applicants go (external link or email)
+  apply_url text,                     -- optional external apply link, if you want one
   created_at timestamptz default now()
 );
 
@@ -38,11 +42,11 @@ create table if not exists notifications_log (
 );
 
 -- 4. A running record of every automated message the platform sends —
---    welcome emails, job-match alerts, and manual broadcasts — so there's
---    always a clear audit trail of what went out, to whom, and when.
+--    welcome emails, job-match alerts, broadcasts, shortlist notices, and
+--    application confirmations — a clear audit trail of what went out, to whom, and when.
 create table if not exists message_log (
   id uuid primary key default gen_random_uuid(),
-  message_type text not null,        -- 'welcome' | 'job_alert' | 'broadcast' | 'shortlist'
+  message_type text not null,        -- 'welcome' | 'job_alert' | 'broadcast' | 'shortlist' | 'rejection' | 'application'
   recipient_email text not null,
   subject text,
   related_job_id uuid references jobs(id) on delete set null,
@@ -50,12 +54,25 @@ create table if not exists message_log (
   sent_at timestamptz default now()
 );
 
+-- 5. Real applications submitted against a specific job — this is the
+--    screen-then-forward pipeline: candidate applies here directly, you
+--    review their CV and details, then forward the ones you select to the employer.
+create table if not exists applications (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid not null references jobs(id) on delete cascade,
+  full_name text not null,
+  email text not null,
+  phone text,
+  cover_note text,
+  cv_url text,
+  status text not null default 'new',  -- 'new' | 'reviewed' | 'forwarded' | 'rejected'
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_applications_job on applications (job_id);
+create index if not exists idx_applications_status on applications (status);
 create index if not exists idx_message_log_type on message_log (message_type);
 create index if not exists idx_message_log_sent_at on message_log (sent_at desc);
-
-alter table message_log enable row level security;
-
--- Make role/location lookups fast as your list grows
 create index if not exists idx_subscribers_role on subscribers (role_interest);
 create index if not exists idx_subscribers_location on subscribers (location);
 
@@ -65,6 +82,8 @@ create index if not exists idx_subscribers_location on subscribers (location);
 alter table subscribers enable row level security;
 alter table jobs enable row level security;
 alter table notifications_log enable row level security;
+alter table message_log enable row level security;
+alter table applications enable row level security;
 
 -- Anyone can read job listings (so the homepage can show them)
 create policy "Public can read jobs" on jobs

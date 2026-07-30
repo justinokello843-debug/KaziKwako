@@ -300,6 +300,107 @@ function MessageLogViewer() {
   );
 }
 
+function ApplicationsViewer() {
+  const [passcode, setPasscode] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [applications, setApplications] = useState(null);
+  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState('');
+
+  async function loadApplications() {
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await fetch('/api/applications-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, status: filter }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Could not load applications.'); return; }
+      setApplications(data.applications);
+      setStatus('idle');
+      if (data.applications.length === 0) setMessage('No applications yet for this filter.');
+    } catch (err) {
+      setStatus('error'); setMessage('Network error — try again.');
+    }
+  }
+
+  async function updateStatus(applicationId, newStatus) {
+    try {
+      await fetch('/api/update-application-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, application_id: applicationId, status: newStatus }),
+      });
+      setApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)));
+    } catch (err) {
+      // silent — the dropdown just won't visually update if this fails
+    }
+  }
+
+  return (
+    <div className="admin-card" style={{ marginTop: 32 }}>
+      <h1 className="display" style={{ fontStyle: 'italic', fontSize: 24 }}>Applications received</h1>
+      <p className="sub">Every real application submitted through a job's Apply button — CV, contact details, and a note if they left one. Screen them here, then forward the ones you select to the employer yourself.</p>
+
+      <div className="form-grid" style={{ marginBottom: 16 }}>
+        <div className="field">
+          <label>Admin passcode</label>
+          <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Filter by status</label>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">All applications</option>
+            <option value="new">New</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="forwarded">Forwarded to employer</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" className="btn" onClick={loadApplications} disabled={!passcode || status === 'loading'}>
+        {status === 'loading' ? 'Loading…' : 'Load applications'}
+      </button>
+
+      {message && <p className={`msg ${status === 'error' ? 'err' : ''}`}>{message}</p>}
+
+      {applications && applications.length > 0 && (
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {applications.map((a) => (
+            <div key={a.id} style={{ background: 'rgba(247,243,233,.06)', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, padding: '14px 16px', fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                <strong>{a.full_name}</strong>
+                <select
+                  value={a.status}
+                  onChange={(e) => updateStatus(a.id, e.target.value)}
+                  style={{ background: 'rgba(247,243,233,.1)', color: '#F7F3E9', border: '1px solid rgba(247,243,233,.2)', borderRadius: 6, fontSize: 11, padding: '4px 8px' }}
+                >
+                  <option value="new">New</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="forwarded">Forwarded</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div style={{ opacity: 0.85 }}>{a.email}{a.phone ? ` · ${a.phone}` : ''}</div>
+              <div style={{ opacity: 0.6, marginTop: 2 }}>Applied for: {a.jobs?.title} — {a.jobs?.company}</div>
+              {a.cover_note && <div style={{ opacity: 0.7, marginTop: 6, fontStyle: 'italic' }}>"{a.cover_note}"</div>}
+              {a.cv_url && (
+                <div style={{ marginTop: 8 }}>
+                  <a href={a.cv_url} target="_blank" rel="noreferrer" style={{ color: '#E8A33D', fontWeight: 700, fontSize: 12 }}>View CV →</a>
+                </div>
+              )}
+              <div className="mono" style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>{new Date(a.created_at).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
@@ -399,6 +500,7 @@ export default function AdminPage() {
       </div>
 
       <BroadcastForm />
+      <ApplicationsViewer />
       <ShortlistTool />
       <MessageLogViewer />
     </div>

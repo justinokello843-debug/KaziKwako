@@ -3,6 +3,7 @@
 import SignupForm from './SignupForm';
 import LanguageSwitcher from './LanguageSwitcher';
 import PricingSection from './PricingSection';
+import JobCard from './JobCard';
 import { useLanguage } from '../../lib/i18n';
 
 export default function HomeClient({ jobs }) {
@@ -49,7 +50,7 @@ export default function HomeClient({ jobs }) {
 
       <div className="perf"></div>
 
-      {/* LIVE JOBS */}
+      {/* LIVE JOBS — short preview only, full list lives on its own page */}
       <section id="jobs" className="section-pad jobs-section" style={{ paddingBottom: 40 }}>
         <div className="wrap">
           <h2>{t('jobs_title')}</h2>
@@ -58,19 +59,17 @@ export default function HomeClient({ jobs }) {
           {jobs.length === 0 ? (
             <div className="empty-state">{t('jobs_empty')}</div>
           ) : (
-            jobs.map((job) => (
-              <div className="job-card" key={job.id}>
-                <div>
-                  <h4>{job.title}</h4>
-                  <div className="co">{job.company}</div>
-                  <div className="meta">{job.location} · {job.job_type || 'Full-time'} {job.salary_range ? `· ${job.salary_range}` : ''}</div>
-                  <div className="desc">{job.description}</div>
-                </div>
-                {job.apply_url && (
-                  <a className="btn btn-primary" href={job.apply_url} target="_blank" rel="noreferrer">{t('jobs_apply')}</a>
-                )}
+            <>
+              {jobs.slice(0, 5).map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+
+              <div style={{ textAlign: 'center', marginTop: 28 }}>
+                <a href="/jobs" className="btn btn-ghost">
+                  {jobs.length > 5 ? `View all ${jobs.length} live roles →` : 'View all live roles →'}
+                </a>
               </div>
-            ))
+            </>
           )}
         </div>
       </section>
