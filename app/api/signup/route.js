@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
-import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { renderEmail, siteChatButton } from '../../../lib/emailTemplate';
 import { recordReferralEvent } from '../../../lib/referral';
 
 export async function POST(request) {
@@ -108,7 +108,7 @@ export async function POST(request) {
         <p style="margin:0 0 16px;"><strong>What happens next:</strong> the moment a verified employer posts a role matching what you're looking for, you'll hear from us directly by email — no applying blind, no guessing whether the job's still open.</p>
         <p style="margin:0 0 24px;">In the meantime, if there's anything you'd like to ask, our team is one tap away:</p>
       `,
-      ctaHtml: whatsappButton(`Hi, I just signed up on Kazi for ${role_interest} roles and had a question.`),
+      ctaHtml: siteChatButton('Ask us anything on Kazi'),
     });
 
     try {

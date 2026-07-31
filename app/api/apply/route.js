@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
-import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { renderEmail, siteChatButton } from '../../../lib/emailTemplate';
 import { getOrCreateReferralCode, recordReferralEvent } from '../../../lib/referral';
 
 export async function POST(request) {
@@ -101,7 +101,7 @@ export async function POST(request) {
         <p style="margin:0 0 16px;">Here's what happens next: our team reviews every CV that comes in, and forwards a shortlist of the strongest candidates directly to the employer. If you're selected, you'll hear from us.</p>
         <p style="margin:0 0 24px;">If you'd like to ask anything in the meantime, our team is one tap away:</p>
       `,
-      ctaHtml: whatsappButton(`Hi, I just applied for ${job.title} at ${job.company} and had a question.`),
+      ctaHtml: siteChatButton('Questions? Chat with us on Kazi'),
     });
 
     try {

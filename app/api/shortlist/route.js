@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
-import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { renderEmail, siteChatButton } from '../../../lib/emailTemplate';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -53,7 +53,7 @@ export async function POST(request) {
           </div>
           <p style="margin:0 0 28px;">We'll be in touch shortly with next steps. If you'd like to ask anything in the meantime, our team is one tap away:</p>
         `,
-        ctaHtml: whatsappButton(`Hi, I've been shortlisted for ${job.title} at ${job.company} and had a question.`),
+        ctaHtml: siteChatButton('Chat with our team on Kazi'),
       });
 
       try {

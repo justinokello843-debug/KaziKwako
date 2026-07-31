@@ -68,8 +68,7 @@ export default function PricingSection() {
               <li>{t('pricing_feat_13')}</li>
             </ul>
             <a
-              href={`https://wa.me/254780228067?text=${encodeURIComponent('Hi, I want to talk about the Enterprise plan on Kazi.')}`}
-              target="_blank" rel="noopener noreferrer"
+              href="/#top"
               className="btn btn-ghost" style={{ width: '100%', borderColor: 'rgba(247,243,233,0.3)', color: 'var(--parchment)' }}
             >
               {t('pricing_talk_sales')}

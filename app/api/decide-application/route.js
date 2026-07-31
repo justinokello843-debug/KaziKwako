@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../lib/supabaseAdmin';
 import { logMessage } from '../../../lib/messageLog';
-import { renderEmail, whatsappButton } from '../../../lib/emailTemplate';
+import { renderEmail, siteChatButton } from '../../../lib/emailTemplate';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -59,7 +59,7 @@ export async function POST(request) {
           </div>
           <p style="margin:0 0 28px;">We'll be in touch shortly with next steps. If you'd like to ask anything in the meantime, our team is one tap away:</p>
         `,
-        ctaHtml: whatsappButton(`Hi, I've been shortlisted for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''} and had a question.`),
+        ctaHtml: siteChatButton('Chat with our team on Kazi'),
       });
     } else {
       messageType = 'rejection';
@@ -79,7 +79,7 @@ export async function POST(request) {
             <p style="margin:0 0 16px;">Since then, the employer made their final decision, and unfortunately they've chosen to move forward with another candidate this time. Being shortlisted meant your application genuinely stood out — this final step often comes down to very fine margins, not a reflection of your ability.</p>
             <p style="margin:0 0 28px;">Please don't let this discourage you — new verified roles go live on Kazi regularly, and we'd like to see you land one. If you have any questions, our team is one tap away:</p>
           `,
-          ctaHtml: whatsappButton(`Hi, I had a question about my application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}.`),
+          ctaHtml: siteChatButton('Questions? Chat with us on Kazi'),
         });
       } else {
         subject = `An update on your application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}`;
@@ -95,7 +95,7 @@ export async function POST(request) {
             <p style="margin:0 0 16px;">This isn't a reflection of your worth or potential — hiring decisions come down to a specific, narrow fit for one role at one moment, nothing more. Please don't let this discourage you from continuing to apply.</p>
             <p style="margin:0 0 28px;">New verified roles go live on Kazi regularly, and we'd genuinely love to see you land one. If you have any questions, our team is one tap away:</p>
           `,
-          ctaHtml: whatsappButton(`Hi, I had a question about my application for ${jobTitle}${jobCompany ? ' at ' + jobCompany : ''}.`),
+          ctaHtml: siteChatButton('Questions? Chat with us on Kazi'),
         });
       }
     }

@@ -1,6 +1,6 @@
 import { supabaseAdmin, isSupabaseConfigured } from '../../../../lib/supabaseAdmin';
 import { logMessage } from '../../../../lib/messageLog';
-import { renderEmail, whatsappButton } from '../../../../lib/emailTemplate';
+import { renderEmail, siteChatButton } from '../../../../lib/emailTemplate';
 
 export async function POST(request) {
   if (!isSupabaseConfigured) {
@@ -49,9 +49,9 @@ export async function POST(request) {
         <div style="background:#F7F3E9;border-left:3px solid #E8A33D;border-radius:6px;padding:16px 20px;margin:0 0 22px;">
           ${message.trim().replace(/\n/g, '<br/>')}
         </div>
-        <p style="margin:0 0 24px;">Head back to the chat on our site to continue the conversation, or reach us directly on WhatsApp:</p>
+        <p style="margin:0 0 24px;">Head back to the chat on our site to continue the conversation:</p>
       `,
-      ctaHtml: whatsappButton(`Hi, following up on our chat — ${message.trim().slice(0, 80)}`),
+      ctaHtml: siteChatButton('Continue the conversation on Kazi'),
     });
 
     let emailed = true;

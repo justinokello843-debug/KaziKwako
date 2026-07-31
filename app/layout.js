@@ -2,7 +2,6 @@ import './globals.css';
 import Script from 'next/script';
 import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
-import WhatsAppButton from './components/WhatsAppButton';
 import ReferralCapture from './components/ReferralCapture';
 import ChatWidget from './components/ChatWidget';
 
@@ -61,7 +60,6 @@ export default function RootLayout({ children }) {
           <CurrencyProvider>
             <ReferralCapture />
             {children}
-            <WhatsAppButton />
             <ChatWidget />
           </CurrencyProvider>
         </LanguageProvider>
