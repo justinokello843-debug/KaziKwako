@@ -46,7 +46,7 @@ create table if not exists notifications_log (
 --    application confirmations — a clear audit trail of what went out, to whom, and when.
 create table if not exists message_log (
   id uuid primary key default gen_random_uuid(),
-  message_type text not null,        -- 'welcome' | 'job_alert' | 'broadcast' | 'shortlist' | 'rejection' | 'application'
+  message_type text not null,        -- 'welcome' | 'job_alert' | 'broadcast' | 'shortlist' | 'rejection' | 'application' | 'chat_alert' | 'chat_reply'
   recipient_email text not null,
   subject text,
   related_job_id uuid references jobs(id) on delete set null,
@@ -100,6 +100,37 @@ create table if not exists referral_events (
 );
 
 create index if not exists idx_referral_events_code on referral_events (referral_code);
+
+-- 8. Live chat — one thread per conversation, started by a visitor from the
+--    chat bubble. thread.id doubles as a lightweight access token: the
+--    visitor's browser remembers it to keep reading/sending in that same
+--    conversation, without needing a real account.
+create table if not exists chat_threads (
+  id uuid primary key default gen_random_uuid(),
+  visitor_name text not null,
+  visitor_email text not null,
+  visitor_phone text,
+  status text not null default 'open',  -- 'open' | 'closed'
+  created_at timestamptz default now(),
+  last_message_at timestamptz default now()
+);
+
+-- 9. Every message in every thread, from either side.
+create table if not exists chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid not null references chat_threads(id) on delete cascade,
+  sender text not null,                 -- 'visitor' | 'admin'
+  message text not null,
+  read_by_admin boolean default false,
+  read_by_visitor boolean default false,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_chat_messages_thread on chat_messages (thread_id);
+create index if not exists idx_chat_threads_last_message on chat_threads (last_message_at desc);
+
+alter table chat_threads enable row level security;
+alter table chat_messages enable row level security;
 
 alter table subscribers enable row level security;
 alter table jobs enable row level security;

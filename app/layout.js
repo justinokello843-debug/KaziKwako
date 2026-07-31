@@ -4,6 +4,7 @@ import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
 import WhatsAppButton from './components/WhatsAppButton';
 import ReferralCapture from './components/ReferralCapture';
+import ChatWidget from './components/ChatWidget';
 
 const GA_MEASUREMENT_ID = 'G-M4HJVG4PRW';
 
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
             <ReferralCapture />
             {children}
             <WhatsAppButton />
+            <ChatWidget />
           </CurrencyProvider>
         </LanguageProvider>
       </body>

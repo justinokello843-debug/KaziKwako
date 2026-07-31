@@ -36,7 +36,8 @@ Total time: ~30–40 minutes the first time.
 2. Fill in the values you collected above:
    - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` → from Supabase
    - `RESEND_API_KEY` and `ALERTS_FROM_EMAIL` → from Resend
-   - `ADMIN_PASSCODE` → make up a password only you know (this gates the `/admin` job-posting page)
+   - `ADMIN_PASSCODE` → make up a password only you know (this gates the `/admin` dashboard)
+   - `ADMIN_NOTIFICATION_EMAIL` → your real, personal email — this is where "someone started a chat" alerts land
 
 ## 4. Run it locally to test — ~5 min
 

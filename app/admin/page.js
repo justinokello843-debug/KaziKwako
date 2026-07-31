@@ -617,6 +617,8 @@ function MessageLogViewer() {
             <option value="application">Application confirmations</option>
             <option value="shortlist">Shortlist notices</option>
             <option value="rejection">Rejection notices</option>
+            <option value="chat_alert">Chat alerts (to you)</option>
+            <option value="chat_reply">Chat replies (to clients)</option>
           </select>
         </div>
       </div>
@@ -646,9 +648,162 @@ function MessageLogViewer() {
   );
 }
 
+/* ============================================================
+   LIVE CHAT INBOX
+   ============================================================ */
+function ChatInboxViewer() {
+  const passcode = usePasscode();
+  const [threads, setThreads] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [reply, setReply] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function loadThreads() {
+    setStatus('loading');
+    setMessage('');
+    try {
+      const res = await fetch('/api/chat/threads-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Could not load conversations.'); return; }
+      setThreads(data.threads);
+      setStatus('idle');
+      if (data.threads.length === 0) setMessage('No conversations yet.');
+    } catch (err) {
+      setStatus('error'); setMessage('Network error — try again.');
+    }
+  }
+
+  useEffect(() => { loadThreads(); /* eslint-disable-next-line */ }, []);
+
+  async function openThread(threadId) {
+    try {
+      const res = await fetch('/api/chat/thread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, thread_id: threadId }),
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setSelected(data.thread);
+      setMessages(data.messages);
+      loadThreads(); // refresh unread counts in the list
+    } catch (err) {}
+  }
+
+  async function sendReply(e) {
+    e.preventDefault();
+    if (!reply.trim() || !selected) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/chat/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode, thread_id: selected.id, message: reply.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessages((prev) => [...prev, { id: 'temp-' + Date.now(), sender: 'admin', message: reply.trim(), created_at: new Date().toISOString() }]);
+        setReply('');
+        if (!data.emailed) setMessage('Reply saved, but the email to the client failed to send.');
+      }
+    } catch (err) {
+      setMessage('Network error sending reply.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="admin-card" style={{ marginTop: 24 }}>
+      <h2 className="display" style={{ fontStyle: 'italic', fontSize: 22 }}>Live chat inbox</h2>
+      <p className="sub">Every conversation started from the chat bubble on your site. Replying here emails the client instantly.</p>
+
+      <button type="button" className="btn" onClick={loadThreads} disabled={status === 'loading'}>
+        {status === 'loading' ? 'Loading…' : 'Refresh'}
+      </button>
+      {message && <p className="msg err">{message}</p>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1.3fr' : '1fr', gap: 16, marginTop: 20 }}>
+        {threads && threads.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 420, overflowY: 'auto' }}>
+            {threads.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => openThread(t.id)}
+                style={{
+                  textAlign: 'left', background: selected?.id === t.id ? 'rgba(232,163,61,.15)' : 'rgba(247,243,233,.06)',
+                  border: `1px solid ${selected?.id === t.id ? 'var(--gold)' : 'rgba(247,243,233,.15)'}`,
+                  borderRadius: 10, padding: '12px 14px', cursor: 'pointer', color: 'inherit', fontSize: 13,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>{t.visitor_name}</strong>
+                  {t.unread_count > 0 && (
+                    <span style={{ background: '#C1440E', color: '#fff', borderRadius: 100, fontSize: 10, padding: '2px 7px', fontWeight: 700 }}>
+                      {t.unread_count}
+                    </span>
+                  )}
+                </div>
+                <div style={{ opacity: 0.6, fontSize: 11.5, marginTop: 2 }}>{t.visitor_email}</div>
+                {t.last_message && (
+                  <div style={{ opacity: 0.75, fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.last_message.sender === 'admin' ? 'You: ' : ''}{t.last_message.message}
+                  </div>
+                )}
+                <div className="mono" style={{ fontSize: 10, opacity: 0.45, marginTop: 6 }}>{new Date(t.last_message_at).toLocaleString()}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {selected && (
+          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', background: 'rgba(247,243,233,.06)', fontSize: 12.5 }}>
+              <strong>{selected.visitor_name}</strong> · {selected.visitor_email}{selected.visitor_phone ? ` · ${selected.visitor_phone}` : ''}
+            </div>
+            <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    alignSelf: m.sender === 'admin' ? 'flex-end' : 'flex-start',
+                    background: m.sender === 'admin' ? 'var(--gold)' : 'rgba(247,243,233,.1)',
+                    color: m.sender === 'admin' ? 'var(--ink)' : 'var(--parchment)',
+                    padding: '9px 13px', borderRadius: 12, fontSize: 13, maxWidth: '80%',
+                  }}
+                >
+                  {m.message}
+                </div>
+              ))}
+            </div>
+            <form onSubmit={sendReply} style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid rgba(247,243,233,.12)' }}>
+              <input
+                type="text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type a reply…"
+                style={{ flex: 1, background: 'rgba(247,243,233,.08)', border: '1px solid rgba(247,243,233,.18)', borderRadius: 100, padding: '9px 14px', color: 'var(--parchment)', fontSize: 13 }}
+              />
+              <button type="submit" className="btn" style={{ marginTop: 0, padding: '9px 18px' }} disabled={sending || !reply.trim()}>
+                {sending ? '…' : 'Send'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   return (
     <PasscodeGate>
+      <ChatInboxViewer />
       <ApplicationsViewer />
       <SubscribersViewer />
       <JobPostForm />
