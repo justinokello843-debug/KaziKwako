@@ -30,13 +30,13 @@ export default function HomeClient({ jobs }) {
       </header>
 
       <section id="top" className="hero">
-        <div className="wrap hero-grid">
-          <div>
-            <span className="eyebrow">{t('eyebrow_verified')}</span>
-            <h1 className="hero-h1">{t('hero_h1_line1')}<br /><em>{t('hero_h1_em')}</em> {t('hero_h1_rest')}</h1>
-            <p className="lede">{t('hero_lede')}</p>
+        <div className="wrap">
+          <span className="eyebrow">{t('eyebrow_verified')}</span>
+          <h1 className="hero-h1">{t('hero_h1_line1')}<br /><em>{t('hero_h1_em')}</em> {t('hero_h1_rest')}</h1>
+          <p className="lede">{t('hero_lede')}</p>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 8 }}>
+            <a href="#jobs" className="btn btn-primary" style={{ fontSize: 15.5, padding: '14px 28px' }}>{t('hero_cta_browse')}</a>
           </div>
-          <SignupForm />
         </div>
 
         <div className="wrap">
@@ -115,6 +115,18 @@ export default function HomeClient({ jobs }) {
       </section>
 
       <div className="perf on-p2"></div>
+
+      {/* SIGNUP FOR ALERTS — secondary, for when there's no live match yet */}
+      <section className="section-pad" style={{ background: 'var(--parchment-2)' }}>
+        <div className="wrap alert-signup-grid">
+          <div>
+            <span className="eyebrow">{t('alert_section_eyebrow')}</span>
+            <h2 style={{ fontSize: 'clamp(24px,3.2vw,32px)', color: 'var(--ink)', margin: '14px 0 12px', lineHeight: 1.15 }}>{t('alert_section_heading')}</h2>
+            <p className="sub" style={{ marginBottom: 0 }}>{t('hero_lede')}</p>
+          </div>
+          <SignupForm />
+        </div>
+      </section>
 
       {/* TRUST */}
       <section id="trust" className="section-pad" style={{ background: 'var(--parchment-2)' }}>

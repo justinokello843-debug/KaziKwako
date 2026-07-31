@@ -730,7 +730,7 @@ function ChatInboxViewer() {
       </button>
       {message && <p className="msg err">{message}</p>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1.3fr' : '1fr', gap: 16, marginTop: 20 }}>
+      <div className={`chat-inbox-grid ${selected ? 'has-selection' : ''}`} style={{ marginTop: 20 }}>
         {threads && threads.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 420, overflowY: 'auto' }}>
             {threads.map((t) => (
