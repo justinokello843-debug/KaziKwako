@@ -193,7 +193,9 @@ export default function HomeClient({ jobs }) {
             </div>
             <div className="foot-col">
               <h5>Company</h5>
-              <a href="#trust">{t('nav_trust')}</a>
+              <a href="/about">About</a>
+              <a href="/contact">Contact</a>
+              <a href="/privacy">Privacy Policy</a>
             </div>
           </div>
           <div className="foot-bottom">
