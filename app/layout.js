@@ -1,5 +1,6 @@
 import './globals.css';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/next';
 import { LanguageProvider } from '../lib/i18n';
 import { CurrencyProvider } from '../lib/currency';
 import ReferralCapture from './components/ReferralCapture';
@@ -63,6 +64,7 @@ export default function RootLayout({ children }) {
             <ChatWidget />
           </CurrencyProvider>
         </LanguageProvider>
+        <Analytics />
       </body>
     </html>
   );
