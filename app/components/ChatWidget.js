@@ -21,8 +21,14 @@ export default function ChatWidget() {
   const [draft, setDraft] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('kazi_chat_thread_id');
-    if (saved) setThreadId(saved);
+    try {
+      const saved = localStorage.getItem('kazi_chat_thread_id');
+      if (saved) setThreadId(saved);
+    } catch (e) {
+      // Some mobile browsers restrict localStorage (private mode, certain
+      // privacy settings) — the widget still works, it just won't remember
+      // a previous conversation on that specific visit.
+    }
   }, []);
 
   useEffect(() => {

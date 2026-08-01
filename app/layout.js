@@ -59,7 +59,7 @@ export default function RootLayout({ children }) {
         <LanguageProvider>
           <CurrencyProvider>
             <ReferralCapture />
-            {children}
+            <div className="page-content">{children}</div>
             <ChatWidget />
           </CurrencyProvider>
         </LanguageProvider>
