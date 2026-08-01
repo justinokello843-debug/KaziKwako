@@ -7,6 +7,7 @@ import ReferralCapture from './components/ReferralCapture';
 import ChatWidget from './components/ChatWidget';
 
 const GA_MEASUREMENT_ID = 'G-M4HJVG4PRW';
+const ADSENSE_CLIENT_ID = 'ca-pub-6669090150359068';
 
 export const metadata = {
   metadataBase: new URL('https://kazikwako.space'),
@@ -40,6 +41,13 @@ export default function RootLayout({ children }) {
         <link
           href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
           rel="stylesheet"
+        />
+        {/* Google AdSense — site verification + ad serving once approved */}
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
         />
       </head>
       <body>
