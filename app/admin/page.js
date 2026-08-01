@@ -1,116 +1,7 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
-
-const PasscodeContext = createContext('');
-const usePasscode = () => useContext(PasscodeContext);
-
-/* ============================================================
-   GATE — nothing below this renders until the passcode is
-   verified against the server. A casual visitor to /admin sees
-   only this screen, never the dashboard, the data, or the tools.
-   ============================================================ */
-function PasscodeGate({ children }) {
-  const [passcode, setPasscode] = useState('');
-  const [input, setInput] = useState('');
-  const [checking, setChecking] = useState(true);
-  const [unlocked, setUnlocked] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem('kazi_admin_passcode');
-    if (saved) verify(saved);
-    else setChecking(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function verify(code) {
-    setChecking(true);
-    setError('');
-    try {
-      const res = await fetch('/api/admin-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode: code }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        sessionStorage.setItem('kazi_admin_passcode', code);
-        setPasscode(code);
-        setUnlocked(true);
-      } else {
-        sessionStorage.removeItem('kazi_admin_passcode');
-        setError('Incorrect passcode.');
-      }
-    } catch (err) {
-      setError('Network error — try again.');
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    verify(input);
-  }
-
-  function logOut() {
-    sessionStorage.removeItem('kazi_admin_passcode');
-    setUnlocked(false);
-    setPasscode('');
-    setInput('');
-  }
-
-  if (checking) {
-    return (
-      <div className="admin-shell">
-        <div className="admin-card" style={{ textAlign: 'center' }}>
-          <p className="sub" style={{ marginBottom: 0 }}>Checking…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!unlocked) {
-    return (
-      <div className="admin-shell">
-        <div className="admin-card">
-          <h1 className="display" style={{ fontStyle: 'italic' }}>Admin access</h1>
-          <p className="sub">This dashboard is private. Enter your passcode to continue — nothing beyond this screen is visible to anyone else.</p>
-          <form onSubmit={handleSubmit}>
-            <div className="field full">
-              <label>Passcode</label>
-              <input type="password" value={input} onChange={(e) => setInput(e.target.value)} autoFocus />
-            </div>
-            <button className="btn" type="submit" style={{ marginTop: 16 }} disabled={!input}>Unlock dashboard</button>
-            {error && <p className="msg err">{error}</p>}
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <PasscodeContext.Provider value={passcode}>
-      <div className="admin-shell" style={{ maxWidth: 900 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div>
-            <span className="eyebrow">Private dashboard</span>
-            <h1 className="display" style={{ fontStyle: 'italic', fontSize: 32, marginTop: 8 }}>Kazi Control Room</h1>
-          </div>
-          <button type="button" onClick={logOut} className="btn btn-ghost" style={{ background: 'transparent', borderColor: 'var(--line)' }}>
-            Lock dashboard
-          </button>
-        </div>
-        <p className="sub" style={{ marginBottom: 8 }}>
-          Everyone who signed up, everyone who applied, and every job you've posted — all in one place.
-          Looking for site traffic (visits, where people came from)? That lives in Google Analytics, not here.
-        </p>
-        {children}
-      </div>
-    </PasscodeContext.Provider>
-  );
-}
+import { useState, useEffect } from 'react';
+import AdminGate, { usePasscode } from '../components/AdminGate';
 
 /* ============================================================
    POST A JOB
@@ -651,165 +542,60 @@ function MessageLogViewer() {
 /* ============================================================
    LIVE CHAT INBOX
    ============================================================ */
-function ChatInboxViewer() {
+function ChatSummaryCard() {
   const passcode = usePasscode();
-  const [threads, setThreads] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [reply, setReply] = useState('');
-  const [status, setStatus] = useState('idle');
-  const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState('');
+  const [totalThreads, setTotalThreads] = useState(null);
+  const [unreadThreads, setUnreadThreads] = useState(0);
 
-  async function loadThreads() {
-    setStatus('loading');
-    setMessage('');
-    try {
-      const res = await fetch('/api/chat/threads-list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setStatus('error'); setMessage(data.error || 'Could not load conversations.'); return; }
-      setThreads(data.threads);
-      setStatus('idle');
-      if (data.threads.length === 0) setMessage('No conversations yet.');
-    } catch (err) {
-      setStatus('error'); setMessage('Network error — try again.');
-    }
-  }
-
-  useEffect(() => { loadThreads(); /* eslint-disable-next-line */ }, []);
-
-  async function openThread(threadId) {
-    try {
-      const res = await fetch('/api/chat/thread', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode, thread_id: threadId }),
-      });
-      const data = await res.json();
-      if (!res.ok) return;
-      setSelected(data.thread);
-      setMessages(data.messages);
-      loadThreads(); // refresh unread counts in the list
-    } catch (err) {}
-  }
-
-  async function sendReply(e) {
-    e.preventDefault();
-    if (!reply.trim() || !selected) return;
-    setSending(true);
-    try {
-      const res = await fetch('/api/chat/reply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode, thread_id: selected.id, message: reply.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMessages((prev) => [...prev, { id: 'temp-' + Date.now(), sender: 'admin', message: reply.trim(), created_at: new Date().toISOString() }]);
-        setReply('');
-        if (!data.emailed) setMessage('Reply saved, but the email to the client failed to send.');
-      }
-    } catch (err) {
-      setMessage('Network error sending reply.');
-    } finally {
-      setSending(false);
-    }
-  }
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/chat/threads-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ passcode }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setTotalThreads(data.threads.length);
+          setUnreadThreads(data.threads.filter((t) => t.unread_count > 0).length);
+        }
+      } catch (err) {}
+    })();
+    // eslint-disable-next-line
+  }, []);
 
   return (
-    <div className="admin-card" style={{ marginTop: 24 }}>
-      <h2 className="display" style={{ fontStyle: 'italic', fontSize: 22 }}>Live chat inbox</h2>
-      <p className="sub">Every conversation started from the chat bubble on your site. Replying here emails the client instantly.</p>
-
-      <button type="button" className="btn" onClick={loadThreads} disabled={status === 'loading'}>
-        {status === 'loading' ? 'Loading…' : 'Refresh'}
-      </button>
-      {message && <p className="msg err">{message}</p>}
-
-      <div className={`chat-inbox-grid ${selected ? 'has-selection' : ''}`} style={{ marginTop: 20 }}>
-        {threads && threads.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 420, overflowY: 'auto' }}>
-            {threads.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => openThread(t.id)}
-                style={{
-                  textAlign: 'left', background: selected?.id === t.id ? 'rgba(232,163,61,.15)' : 'rgba(247,243,233,.06)',
-                  border: `1px solid ${selected?.id === t.id ? 'var(--gold)' : 'rgba(247,243,233,.15)'}`,
-                  borderRadius: 10, padding: '12px 14px', cursor: 'pointer', color: 'inherit', fontSize: 13,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>{t.visitor_name}</strong>
-                  {t.unread_count > 0 && (
-                    <span style={{ background: '#C1440E', color: '#fff', borderRadius: 100, fontSize: 10, padding: '2px 7px', fontWeight: 700 }}>
-                      {t.unread_count}
-                    </span>
-                  )}
-                </div>
-                <div style={{ opacity: 0.6, fontSize: 11.5, marginTop: 2 }}>{t.visitor_email}</div>
-                {t.last_message && (
-                  <div style={{ opacity: 0.75, fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.last_message.sender === 'admin' ? 'You: ' : ''}{t.last_message.message}
-                  </div>
-                )}
-                <div className="mono" style={{ fontSize: 10, opacity: 0.45, marginTop: 6 }}>{new Date(t.last_message_at).toLocaleString()}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {selected && (
-          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid rgba(247,243,233,.15)', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', background: 'rgba(247,243,233,.06)', fontSize: 12.5 }}>
-              <strong>{selected.visitor_name}</strong> · {selected.visitor_email}{selected.visitor_phone ? ` · ${selected.visitor_phone}` : ''}
-            </div>
-            <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  style={{
-                    alignSelf: m.sender === 'admin' ? 'flex-end' : 'flex-start',
-                    background: m.sender === 'admin' ? 'var(--gold)' : 'rgba(247,243,233,.1)',
-                    color: m.sender === 'admin' ? 'var(--ink)' : 'var(--parchment)',
-                    padding: '9px 13px', borderRadius: 12, fontSize: 13, maxWidth: '80%',
-                  }}
-                >
-                  {m.message}
-                </div>
-              ))}
-            </div>
-            <form onSubmit={sendReply} style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid rgba(247,243,233,.12)' }}>
-              <input
-                type="text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type a reply…"
-                style={{ flex: 1, background: 'rgba(247,243,233,.08)', border: '1px solid rgba(247,243,233,.18)', borderRadius: 100, padding: '9px 14px', color: 'var(--parchment)', fontSize: 13 }}
-              />
-              <button type="submit" className="btn" style={{ marginTop: 0, padding: '9px 18px' }} disabled={sending || !reply.trim()}>
-                {sending ? '…' : 'Send'}
-              </button>
-            </form>
-          </div>
-        )}
+    <div className="admin-card" style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <div>
+        <h2 className="display" style={{ fontStyle: 'italic', fontSize: 22, marginBottom: 6 }}>Live chat inbox</h2>
+        <p className="sub" style={{ marginBottom: 0 }}>
+          {totalThreads === null ? 'Loading…' : `${totalThreads} conversation${totalThreads === 1 ? '' : 's'}`}
+          {unreadThreads > 0 && (
+            <span style={{ marginLeft: 8, background: '#C1440E', color: '#fff', borderRadius: 100, fontSize: 11, padding: '2px 9px', fontWeight: 700 }}>
+              {unreadThreads} unread
+            </span>
+          )}
+        </p>
       </div>
+      <a href="/admin/chats" className="btn">Open chat inbox →</a>
     </div>
   );
 }
 
 export default function AdminPage() {
   return (
-    <PasscodeGate>
-      <ChatInboxViewer />
+    <AdminGate
+      title="Kazi Control Room"
+      subtitle="Everyone who signed up, everyone who applied, and every job you've posted — all in one place. Looking for site traffic (visits, where people came from)? That lives in Google Analytics, not here."
+    >
+      <ChatSummaryCard />
       <ApplicationsViewer />
       <SubscribersViewer />
       <JobPostForm />
       <BroadcastForm />
       <ShortlistTool />
       <MessageLogViewer />
-    </PasscodeGate>
+    </AdminGate>
   );
 }
