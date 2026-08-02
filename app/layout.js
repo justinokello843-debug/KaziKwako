@@ -42,12 +42,15 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
           rel="stylesheet"
         />
-        {/* Google AdSense — site verification + ad serving once approved */}
+        {/* Google AdSense — site verification + ad serving once approved.
+            beforeInteractive ensures this tag is present in the raw HTML
+            itself, not injected later by client-side JS — important because
+            AdSense's verification crawler checks the initial page source. */}
         <Script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
       </head>
       <body>
